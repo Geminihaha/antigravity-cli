@@ -1,33 +1,38 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# Antigravity CLI Reset and Initialization Script (glibc C Wrapper Native)
-# Run this script to kill current processes (including this CLI server), apply the C wrapper, and reboot.
+# Antigravity CLI Reset and Initialization Script (Self-Updating glibc C Wrapper)
+# Detects version updates, updates backend backup binary, and applies the C wrapper.
 
 REAL_BIN="/data/data/com.termux/files/home/.local/bin/agy.va39.real"
 ORIG_BIN="/data/data/com.termux/files/home/.local/bin/agy.va39"
 
 echo "1. Securing backup of the original 160MB Go binary..."
-# Check if the backup binary already exists.
-# If not, and the current orig_bin is the large Go binary (size > 10MB), back it up.
-if [ ! -f "$REAL_BIN" ]; then
-    if [ -f "$ORIG_BIN" ]; then
-        FILESIZE=$(stat -c%s "$ORIG_BIN" 2>/dev/null || echo 0)
-        if [ "$FILESIZE" -gt 10000000 ]; then
-            mv "$ORIG_BIN" "$REAL_BIN"
-            echo "Original Go binary backed up successfully to agy.va39.real."
-        else
-            echo "Error: Original binary is too small (might be an old wrapper). Cannot backup!"
-            exit 1
-        fi
+
+ORIG_SIZE=$(stat -c%s "$ORIG_BIN" 2>/dev/null || echo 0)
+REAL_SIZE=$(stat -c%s "$REAL_BIN" 2>/dev/null || echo 0)
+
+# Check if ORIG_BIN is the large Go binary (size > 10MB)
+if [ "$ORIG_SIZE" -gt 10000000 ]; then
+    # Backup doesn't exist OR version updated (size mismatch)
+    if [ ! -f "$REAL_BIN" ] || [ "$ORIG_SIZE" -ne "$REAL_SIZE" ]; then
+        echo "Version update detected ($ORIG_SIZE bytes vs backup $REAL_SIZE bytes). Updating backup..."
+        rm -f "$REAL_BIN"
+        mv "$ORIG_BIN" "$REAL_BIN"
+        echo "New Go binary backed up successfully to agy.va39.real."
     else
-        echo "Error: Original Go binary not found at $ORIG_BIN."
-        exit 1
+        echo "Go binary already backed up and sizes match. Skipping backup."
     fi
 else
-    echo "Backup already exists. Skipping backup."
+    # ORIG_BIN is the small wrapper binary
+    if [ -f "$REAL_BIN" ]; then
+        echo "Wrapper already installed. Using existing backup."
+    else
+        echo "Error: Both active and backup binaries are missing or invalid!"
+        exit 1
+    fi
 fi
 
-echo "2. Killing existing backend processes (including this CLI server)..."
+echo "2. Killing existing backend processes..."
 pkill -9 -f agy.va39 || true
 pkill -9 -f statusline.sh || true
 pkill -9 -f dummy-keyring-daemon.py || true
@@ -54,6 +59,21 @@ fi
 echo "5. Syncing environment variables and starting daemons..."
 export GEMINI_DIR="/data/data/com.termux/files/home/.gemini"
 export DBUS_SESSION_BUS_ADDRESS="unix:path=/data/data/com.termux/files/usr/tmp/dbus-session.socket"
+
+# 5.1. Configure glibc DNS resolver to prevent 5s timeout lags
+GLIBC_RESOLV="/data/data/com.termux/files/usr/glibc/etc/resolv.conf"
+mkdir -p "$(dirname "$GLIBC_RESOLV")"
+if [ ! -f "$GLIBC_RESOLV" ] || ! grep -q "options timeout:1" "$GLIBC_RESOLV"; then
+    echo "Writing optimized DNS configuration to $GLIBC_RESOLV..."
+    cat << 'EOF' > "$GLIBC_RESOLV"
+options timeout:1 attempts:1
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+nameserver 9.9.9.9
+EOF
+fi
+
 
 if ! pgrep -f "dbus-daemon.*session" > /dev/null; then
     /data/data/com.termux/files/usr/bin/dbus-daemon --session --address=unix:path=/data/data/com.termux/files/usr/tmp/dbus-session.socket --fork

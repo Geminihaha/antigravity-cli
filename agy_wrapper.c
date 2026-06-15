@@ -16,18 +16,27 @@ int main(int argc, char *argv[]) {
     setenv("GEMINI_DIR", "/data/data/com.termux/files/home/.gemini", 1);
     setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/data/data/com.termux/files/usr/tmp/dbus-session.socket", 1);
 
+    int started_daemon = 0;
+
     // 2. Ensure dbus-daemon session bus is running
     if (!is_process_running("dbus-daemon.*session")) {
         system("rm -f /data/data/com.termux/files/usr/tmp/dbus-session.socket");
         system("/data/data/com.termux/files/usr/bin/dbus-daemon --session --address=unix:path=/data/data/com.termux/files/usr/tmp/dbus-session.socket --fork");
+        started_daemon = 1;
     }
 
     // 3. Ensure dummy-keyring-daemon is running
     if (!is_process_running("dummy-keyring-daemon.py")) {
         system("/data/data/com.termux/files/usr/bin/nohup /data/data/com.termux/files/usr/bin/python3 /data/data/com.termux/files/usr/libexec/dummy-keyring-daemon.py > /dev/null 2>&1 &");
+        started_daemon = 1;
     }
 
-    // 4. Construct arguments for glibc dynamic linker
+    // 4. Wait 400ms if any daemon was newly started to avoid timing issues with socket binding
+    if (started_daemon) {
+        usleep(400000);
+    }
+
+    // 5. Construct arguments for glibc dynamic linker
     char *ld_path = "/data/data/com.termux/files/usr/glibc/lib/ld-linux-aarch64.so.1";
     char *lib_path = "/data/data/com.termux/files/home/.local/bin/../lib:/data/data/com.termux/files/usr/glibc/lib";
     char *real_binary = "/data/data/com.termux/files/home/.local/bin/agy.va39.real";
