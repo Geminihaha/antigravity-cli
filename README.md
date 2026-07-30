@@ -5,7 +5,7 @@
 https://gist.github.com/Brajesh2022/e42160d29b55417db6c18c52dd1d6d37
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Geminihaha/antigravity-cli/install_agy_termux.sh | bash 
+curl -fsSL https://raw.githubusercontent.com/Geminihaha/antigravity-cli/main/install_agy_termux.sh | bash 
 ```
 
 # Antigravity CLI
