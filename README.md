@@ -1,5 +1,13 @@
 # Antigravity CLI 사용시 이슈 사항 대응 코드 저장소
 
+## Termux 용 Installation
+@Brajesh2022 글을 참고하여 제작함.
+https://gist.github.com/Brajesh2022/e42160d29b55417db6c18c52dd1d6d37
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Geminihaha/antigravity-cli/install_agy_termux.sh | bash 
+```
+
 # Antigravity CLI
 
 Antigravity CLI understands your codebase, makes edits with your permission, and executes commands — right from your terminal.
