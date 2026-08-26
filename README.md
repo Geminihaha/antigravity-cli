@@ -2,7 +2,7 @@
 
 ## Termux 용 Installation
 
-이 Termux 포크에 구현된 핵심 바이너리 패치 및 VA39 메모리 레이아웃 엔지니어링의 상당 부분은 @hjotha와 @Brajesh2022의 기초적인 작업과 발견을 참고하여 제작하였습니다. 
+이 Termux 포크에 구현된 핵심 바이너리 패치 및 VA39 메모리 레이아웃 엔지니어링의 상당 부분은 @Brajesh2022의 기초적인 작업과 발견을 참고하여 제작하였습니다. 
 커뮤니티에 깊은 감사드립니다.
 https://gist.github.com/Brajesh2022/e42160d29b55417db6c18c52dd1d6d37
 
