@@ -1,8 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -uo pipefail
 
-# 부모 프로세스 종료/인터럽트 시 즉시 정상 종료되도록 시그널 처리
-trap 'exit 0' INT TERM HUP EXIT
+trap 'exit 0' INT TERM HUP
 
 # ─── ANSI Helpers (Standard 16-color palette only) ───────────────────────────
 R="\033[0m"         # Reset
@@ -10,7 +9,6 @@ B="\033[1m"         # Bold
 D="\033[2m"         # Dim
 I="\033[3m"         # Italic
 
-# Foreground accents (Standard 16 colors)
 FG_BLACK="\033[30m"
 FG_RED="\033[31m"
 FG_GREEN="\033[32m"
@@ -28,17 +26,17 @@ FG_BRIGHT_MAGENTA="\033[95m"
 FG_BRIGHT_CYAN="\033[96m"
 FG_BRIGHT_WHITE="\033[97m"
 
-# Number Highlight Color
 NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
 
-# ─── Stdin 안전 읽기 (타임아웃 적용 및 무한 블로킹 방지) ─────────────────────
+# ─── Read JSON line from stdin instantly (Non-blocking) ──────────────────────
+# agy cli sends JSON as a single line on an open pipe.
+# Using bash built-in 'read -t 0.1' returns immediately upon receiving newline
+# without waiting for EOF / pipe closure, preventing process accumulation.
 RAW_JSON=""
 if [ ! -t 0 ]; then
-  # 0.3초 이내에 입력이 오지 않으면 멈추지 않고 즉시 넘어감
-  RAW_JSON=$(timeout 0.3s cat 2>/dev/null || true)
+  read -t 0.1 -r RAW_JSON || true
 fi
 
-# 입력이 없거나 비어있으면 기본 빈 JSON 객체 사용
 if [ -z "$RAW_JSON" ]; then
   RAW_JSON="{}"
 fi
@@ -73,7 +71,6 @@ PARSED=$(echo "$RAW_JSON" | jq -r '
 } <<< "$PARSED"
 
 # ─── Computed Values ─────────────────────────────────────────────────────────
-# Use LC_NUMERIC=C to prevent bash printf errors in locales that use commas for decimals
 PCT_FMT=$(LC_NUMERIC=C printf "%.1f" "$USED_PCT" 2>/dev/null || echo "0.0")
 PCT_INT=${USED_PCT%.*}; PCT_INT=${PCT_INT:-0}
 
@@ -122,7 +119,6 @@ BAR_LEN=15
 FILLED=$((PCT_INT * BAR_LEN / 100))
 REMAINDER=$(( (PCT_INT * BAR_LEN) % 100 ))
 
-# Pick color based on percentage
 if [ "$PCT_INT" -ge 90 ]; then
   BAR_COLOR="$FG_BRIGHT_RED"
 elif [ "$PCT_INT" -ge 60 ]; then
@@ -131,7 +127,6 @@ else
   BAR_COLOR="$FG_BRIGHT_WHITE"
 fi
 
-# Build bar with partial-fill last block
 BAR=""
 for ((i = 0; i < BAR_LEN; i++)); do
   if [ "$i" -lt "$FILLED" ]; then
@@ -165,14 +160,13 @@ LINE1="${S}${M}${DIR_FMT}${V}"
 LINE2=" ${CTX}${DOT}${ART_FMT}${DOT}${SUB_FMT}${DOT}${BG_FMT}${DOT}${SB}"
 
 if [ "$COLS" -ge 120 ]; then
-  # Wide: single line
   echo -e "${LINE1}${FG_GRAY}  │  ${R}${LINE2}"
 elif [ "$COLS" -ge 80 ]; then
-  # Medium: two-line layout with border
   echo -e "${FG_GRAY}╭─${R} ${LINE1}"
   echo -e "${FG_GRAY}╰─${R}${LINE2}"
 else
-  # Narrow: compact two-line, minimal chrome
   echo -e "${S}${M}"
   echo -e "${CTX}${DOT}${BG_FMT}"
 fi
+
+exit 0
